@@ -1,19 +1,36 @@
-aStarSearch <- function(start, goal) {
-  visited = list()
-  frontier = list()
+'''
+if (car$directions != NULL &&
+    length(car$directions) > 0 &&
+    HEURISTIC) {
+  car$nextMove = car$directions[end]
+  return car
+} else {
+  # the optimal path has exceeded heuristics, recalculate path
+  aStar to the nearest undelivered package
+  store path in car$directions
+  return car
+}
+'''
 
-# returns a list of moves to get to goal
+debug = F
+
+# returns a list of optimal moves to get to goal
+aStarSearch <- function(roads, start, goal) {
+  visited = c()
+  frontier = c()
+
+  return 5
 }
 
-# for each package:
-#   run astar for the pickup and delivery
-#
-# end
 ourDeliveryMan <- function(roads, car, packages) {
-  for (i in length(packages)) {
-
+  if (debug) {
+    print(packages)
   }
-  nextMove = 1
-  car$nextMove = nextMove
-  return (car)
+
+  for (i in length(packages) {
+    package = packages[i,] # ith package
+    path = aStarSearch(roads, list(x=package[0], y=package[1]), list(x=package[2], y=package[3]))
+    car$nextMove = nextMove
+    return (car)
+  }
 }
