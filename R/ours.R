@@ -13,6 +13,7 @@ if (car$directions != NULL &&
 "
 
 debug = T
+nodeKeySep = "_"
 
 findTurnCost <- function(roadSet, start, end) {
   return (sum(roadSet[start:end]))
@@ -62,32 +63,25 @@ leastCostInFrontier <- function(frontier, fScore) {
   return (frontier[[pathKey]])
 }
 
-getNeighborNodes <- function(pos, roadSize, prev=NULL) {
+getNeighborNodes <- function(pos, roadSize) {
   neighbors = list(left=c(pos[1] - 1, pos[2]),
              right=c(pos[1] + 1, pos[2]),
                up=c(pos[1], pos[2] + 1),
             down=c(pos[1], pos[2] - 1)
   )
-  if (!is.null(prev)) {
-    prev = paste(prev)
-    switch(prev,
-      "4"={neighbors$left  = NULL},
-      "6"={neighbors$right = NULL},
-      "8"={neighbors$up    = NULL},
-      "2"={neighbors$down  = NULL}
-    )
-  }
+  # keep x,y > 0, and x < roadSize, y < roadSize - 1
   return (Filter(function(n) { n[1] > 0 && n[2] > 0 &&
-    n[1] <= roadSize && n[2] <= roadSize}, neighbors))
+    n[1] <= roadSize && n[2] <= roadSize-1}, neighbors))
 }
 
 nodesEqual <- function(n1, n2) {
+  # print(paste("eq", n1, n2, class(n1), sep=","))
   return (n1[1] == n2[1] && n1[2] == n2[2])
 }
 
 # list(x=1, y=3) => '1 3'
 nodeKey <- function(node) {
-  return (paste(node[1], node[2], sep="_"))
+  return (paste(node[1], node[2], sep=nodeKeySep))
 }
 
 # returns a list of moves to get to goal
@@ -97,7 +91,7 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
   frontier = list() # key:vector
   frontier[[startKey]] = start
 
-  path = c(5)
+  cameFrom = list()
 
   # f(n) = g(n) + h(n)
   gScore = list() # key:int
@@ -106,13 +100,12 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
   fScore = list() # key:int
   fScore[startKey] = h(roads, start, goal)
 
-  # BEGIN LOOP
+  # BEGIN LOOP ------------------------------------------------------------
   while(length(gScore) > 0) {
     current = leastCostInFrontier(frontier, fScore)
-    print(current)
     if (nodesEqual(current, goal)) {
       # append final move to path
-      return (path)
+      return (cameFrom)
     }
 
     # delete from frontier map
@@ -122,7 +115,7 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
     # add to visited list
     visited = append(visited, curKey)
 
-    neighbors = getNeighborNodes(current, dim(roads$hroads), tail(path, 1))
+    neighbors = getNeighborNodes(current, dim(roads$hroads))
     for (i in names(neighbors)) {
       neighbor = neighbors[[i]]
       neighborKey = nodeKey(neighbor)
@@ -148,19 +141,47 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
       }
 
       # This path is the best until now. Record it!
-      switch(i,
-         left={path = append(path, 4)},
-        right={path = append(path, 6)},
-           up={path = append(path, 8)},
-         down={path = append(path, 2)},
-        { path = append(path, 5)}
-      )
+      cameFrom[neighborKey] = curKey
       gScore[neighborKey] = tmp_gScore
       fScore[neighborKey] = tmp_gScore + h(roads, neighbor, goal)
     }
   }
 
   return (5)
+}
+
+# construct the path backwards
+determineDirection <- function(from, to) {
+  # print(paste("dir", from, to, sep=","))
+  fromV = Map(as.integer, strsplit(from, nodeKeySep))[[1]]
+  toV = Map(as.integer, strsplit(to, nodeKeySep))[[1]]
+  # return the REVERSE direction of `from` to `to`
+  if (toV[1] > fromV[1]) {
+    return (4)
+  } else if ( toV[1] < fromV[1]) {
+    return (6)
+  } else if (toV[2] > fromV[2]) {
+    return (2)
+  } else if (toV[2] < fromV[2]) {
+    return (8)
+  }
+}
+
+# given paths: list("1_1"="1_0", "1_0"="0_0")
+# start: "0_0"
+# end  : "1_1"
+# -> c(6, 8)
+constructNumericalPath <- function(paths, start, end) {
+  cur = nodeKey(end)
+  startKey = nodeKey(start)
+
+  numPath = c()
+  while (cur != startKey) {
+    numPath = append(numPath, determineDirection(cur, paths[[cur]]))
+    cur = paths[[cur]]
+  }
+
+  return (rev(numPath))
 }
 
 ourDeliveryMan <- function(roads, car, packages) {
@@ -171,13 +192,14 @@ ourDeliveryMan <- function(roads, car, packages) {
 
   # for (i in length(packages)) {
   package = packages[1,] # ith package
-  path = aStarSearch(roads,
-    c(car$x, car$y),
-    c(package[1], package[2]))
+  start = c(car$x, car$y)
+  end = c(package[1], package[2])
+  paths = aStarSearch(roads, start, end)
   #   car$nextMove = nextMove
   #   return (car)
   # }
-  print(path)
+  numPath = constructNumericalPath(paths, start, end)
+  print(numPath)
 }
 
 runDeliveryMan(carReady=ourDeliveryMan, doPlot=F)
