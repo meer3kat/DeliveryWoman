@@ -15,13 +15,10 @@ if (car$directions != NULL &&
 debug = T
 
 findTurnCost <- function(roadSet, start, end) {
-  val = sum(roadSet[start:end])
-  # print(paste(start, end, "=", val, sep="_"))
-  return (val)
+  return (sum(roadSet[start:end]))
 }
 
 manhattanCost <- function(roads, start, goal) {
-  if (debug) print(paste("manhattanCost", start, goal))
   retX = findTurnCost(roads$hroads, start[1], goal[1])
   retY = findTurnCost(roads$vroads, start[2], goal[2])
   return (retX + retY)
@@ -57,8 +54,6 @@ leastCostInFrontier <- function(frontier, fScore) {
   minPath = Inf
   pathKey = ""
   for (i in names(frontier)) {
-    # if (debug) print(paste("front", frontier[i], "fscore", fScore[i], sep=","))
-    if (debug) print(paste("fs", class(fScore[[i]]), "mp", minPath, sep=","))
     if (is.element(i, names(fScore)) && fScore[[i]] < minPath) {
       minPath = fScore[i]
       pathKey = i
@@ -82,12 +77,10 @@ getNeighborNodes <- function(pos, prev=NULL) {
       "2"={neighbors$down  = NULL}
     )
   }
-  return (neighbors)
+  return (Filter(function(n) n[1] >= 0 && n[2] >= 0, neighbors))
 }
 
 nodesEqual <- function(n1, n2) {
-  # if (debug) print(paste("nodesX", n1[1], n2[1], sep="-"))
-  # if (debug) print(paste("nodesY", n1[2], n2[2], sep="-"))
   return (n1[1] == n2[1] && n1[2] == n2[2])
 }
 
@@ -115,29 +108,30 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
   # BEGIN LOOP
   while(length(gScore) > 0) {
     current = leastCostInFrontier(frontier, fScore)
-    if (debug) print(paste("current", current, sep=" "))
+    # if (debug) print(paste("current", current, sep=" "))
     if (nodesEqual(current, goal)) {
       # append final move to path
       return (path)
     }
 
     # delete from frontier map
-    frontier[nodeKey(current)] = NULL
+    curKey = nodeKey(current)
+    frontier[curKey] = NULL
 
     # add to visited list
-    visited = append(visited, nodeKey(current))
+    visited = append(visited, curKey)
 
     neighbors = getNeighborNodes(current, tail(path, 1))
     for (i in names(neighbors)) {
       neighbor = neighbors[[i]]
-      curKey = nodeKey(neighbor)
+      neighborKey = nodeKey(neighbor)
       # Ignore the neighbor which is already evaluated.
-      if (is.element(curKey, visited)) {
+      if (is.element(neighborKey, visited)) {
+        print(paste("node already visited ", neighborKey, cat(visited, sep=","), cat(path, sep="▶️")))
         next
       }
 
       # Discover a new node
-      neighborKey = nodeKey(neighbor)
       if (!is.element(neighborKey, names(frontier))) {
         frontier[[neighborKey]] = neighbor
       }
@@ -145,7 +139,7 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
       # The distance from start to a neighbor
       dist = findTurnCost(roads$hroads, current[1], neighbor[1]) +
         findTurnCost(roads$vroads, current[2], neighbor[2])
-      tmp_gScore = gScore[[nodeKey(current)]] + dist
+      tmp_gScore = gScore[[curKey]] + dist
 
       # This is not a better path.
       if (is.integer(gScore[[neighborKey]]) &&
@@ -154,6 +148,7 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
       }
 
       # This path is the best until now. Record it!
+      print(paste("going", i))
       switch(i,
          left={path = append(path, 4)},
         right={path = append(path, 6)},
@@ -161,9 +156,8 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
          down={path = append(path, 2)},
         { path = append(path, 5)}
       )
-      print(tmp_gScore)
       gScore[neighborKey] = tmp_gScore
-      print(paste(tmp_gScore, h(roads, neighbor, goal), sep="__"))
+      # print(paste(tmp_gScore, h(roads, neighbor, goal), sep="__"))
       fScore[neighborKey] = tmp_gScore + h(roads, neighbor, goal)
     }
   }
