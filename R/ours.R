@@ -60,8 +60,14 @@ getNeighborNodes <- function(pos, roadSize) {
     n[1] <= roadSize && n[2] <= roadSize-1}, neighbors))
 }
 
-nodesEqual <- function(n1, n2) {
-  # print(paste("eq", n1, n2, class(n1), sep=","))
+nodesEqual <- function(n1=c(-1,-1), n2=c(-1,-1)) {
+  if (debug) {
+    print(paste("eq", n1, n2, class(n1), class(n2), sep=","))
+  }
+
+  if (is.null(n1)) {
+    n1 = c(-1, -1)
+  }
   return (n1[1] == n2[1] && n1[2] == n2[2])
 }
 
@@ -89,6 +95,8 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
   # BEGIN LOOP ------------------------------------------------------------
   while(length(gScore) > 0) {
     current = leastCostInFrontier(frontier, fScore)
+    # print(current)
+    # print(goal)
     if (nodesEqual(current, goal)) {
       # append final move to path
       return (cameFrom)
@@ -173,16 +181,13 @@ constructNumericalPath <- function(paths, start, end) {
 ourDeliveryMan <- function(roads, car, packages) {
   if (debug) {
     # print(roads)
-    print(packages)
+    # print(packages)
   }
 
-  if (is.null(car$mem$directions)) {
-    car$mem$directions = c()
-  }
-
-  if (length(car$mem$directions) == 0) {
+  if (is.null(car$mem$directions) || length(car$mem$directions) == 0) {
     # no packages
     if (car$load == 0) {
+      # find an undelivered package and go to it
       for (i in 1:length(packages[,1])) {
         if (packages[i,5] == 0) {
           package = packages[i,]
@@ -196,14 +201,20 @@ ourDeliveryMan <- function(roads, car, packages) {
       }
     # deliver package
     } else {
+      # get current pacakge
       package = car$mem$package
       start = c(car$x, car$y)
+      # find path to delivery destination
       end = c(package[3], package[4])
       paths = aStarSearch(roads, start, end)
       car$mem$directions = constructNumericalPath(paths, start, end)
     }
   }
 
+  if (is.null(tail(car$mem$directions, -1))) {
+    car$mem$directions = NULL
+    return (car)
+  }
   car$nextMove = head(car$mem$directions, 1)
   car$mem$directions = tail(car$mem$directions, -1)
   if (debug) {
