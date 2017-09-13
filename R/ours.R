@@ -172,9 +172,8 @@ constructNumericalPath <- function(paths, start, end) {
 
 ourDeliveryMan <- function(roads, car, packages) {
   if (debug) {
-    print(roads)
-    print(car)
-    # print(packages)
+    # print(roads)
+    print(packages)
   }
 
   if (is.null(car$mem$directions)) {
@@ -184,7 +183,7 @@ ourDeliveryMan <- function(roads, car, packages) {
   if (length(car$mem$directions) == 0) {
     # no packages
     if (car$load == 0) {
-      for (i in length(packages[,1])) {
+      for (i in 1:length(packages[,1])) {
         if (packages[i,5] == 0) {
           package = packages[i,]
           start = c(car$x, car$y)
@@ -206,7 +205,7 @@ ourDeliveryMan <- function(roads, car, packages) {
   }
 
   car$nextMove = head(car$mem$directions, 1)
-  car$mem$directions = tail(a$mem$directions, -1)
+  car$mem$directions = tail(car$mem$directions, -1)
   if (debug) {
     print(paste("x,y:", car$x, car$y, "nextMove:", car$nextMove, sep=" "))
     print(car$mem$directions)
