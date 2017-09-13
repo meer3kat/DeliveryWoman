@@ -1,17 +1,3 @@
-"
-if (car$directions != NULL &&
-    length(car$directions) > 0 &&
-    HEURISTIC) {
-  car$nextMove = car$directions[end]
-  return car
-} else {
-  # the optimal path has exceeded heuristics, recalculate path
-  aStar to the nearest undelivered package
-  store path in car$directions
-  return car
-}
-"
-
 debug = T
 nodeKeySep = "_"
 
@@ -187,19 +173,45 @@ constructNumericalPath <- function(paths, start, end) {
 ourDeliveryMan <- function(roads, car, packages) {
   if (debug) {
     print(roads)
-    print(packages)
+    print(car)
+    # print(packages)
   }
 
-  # for (i in length(packages)) {
-  package = packages[1,] # ith package
-  start = c(car$x, car$y)
-  end = c(package[1], package[2])
-  paths = aStarSearch(roads, start, end)
-  #   car$nextMove = nextMove
-  #   return (car)
-  # }
-  numPath = constructNumericalPath(paths, start, end)
-  print(numPath)
+  if (is.null(car$mem$directions)) {
+    car$mem$directions = c()
+  }
+
+  if (length(car$mem$directions) == 0) {
+    # no packages
+    if (car$load == 0) {
+      for (i in length(packages[,1])) {
+        if (packages[i,5] == 0) {
+          package = packages[i,]
+          start = c(car$x, car$y)
+          end = c(package[1], package[2])
+          car$mem$package = package
+          paths = aStarSearch(roads, start, end)
+          car$mem$directions = constructNumericalPath(paths, start, end)
+          break
+        }
+      }
+    # deliver package
+    } else {
+      package = car$mem$package
+      start = c(car$x, car$y)
+      end = c(package[3], package[4])
+      paths = aStarSearch(roads, start, end)
+      car$mem$directions = constructNumericalPath(paths, start, end)
+    }
+  }
+
+  car$nextMove = head(car$mem$directions, 1)
+  car$mem$directions = tail(a$mem$directions, -1)
+  if (debug) {
+    print(paste("x,y:", car$x, car$y, "nextMove:", car$nextMove, sep=" "))
+    print(car$mem$directions)
+  }
+  return (car)
 }
 
 runDeliveryMan(carReady=ourDeliveryMan, doPlot=F)
