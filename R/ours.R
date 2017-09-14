@@ -224,4 +224,14 @@ ourDeliveryMan <- function(roads, car, packages) {
   return (car)
 }
 
+benchmarkTurns <- function() {
+  sum = 0
+  size = 5
+  for (i in 1:size) {
+    sum = sum + runDeliveryMan(carReady=ourDeliveryMan, doPlot=F)
+  }
+
+  print(paste("Average turns:", sum / size, "over", size, "runs." sep=" "))
+}
+
 runDeliveryMan(carReady=ourDeliveryMan, doPlot=F)
