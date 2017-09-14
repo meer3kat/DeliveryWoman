@@ -1,4 +1,4 @@
-debug = T
+debug = F
 nodeKeySep = "_"
 
 findTurnCost <- function(roadSet, start, end) {
@@ -11,6 +11,7 @@ manhattanCost <- function(roads, start, goal) {
   return (retX + retY)
 }
 
+# UNUSED
 # given roads and position finds the lowest path to the next node
 leastCostToNextNode <- function(roads, pos, prev) {
   nodes = list(left=roads$hroads[pos[1]] - 1,
@@ -46,6 +47,8 @@ leastCostInFrontier <- function(frontier, fScore) {
       pathKey = i
     }
   }
+  # print(pathKey)
+  # print(names(frontier))
   return (frontier[[pathKey]])
 }
 
@@ -55,15 +58,15 @@ getNeighborNodes <- function(pos, roadSize) {
                up=c(pos[1], pos[2] + 1),
             down=c(pos[1], pos[2] - 1)
   )
-  # keep x,y > 0, and x < roadSize, y < roadSize - 1
+  # keep x,y > 0, and x <= roadSize, y <= roadSize
   return (Filter(function(n) { n[1] > 0 && n[2] > 0 &&
-    n[1] <= roadSize && n[2] <= roadSize-1}, neighbors))
+    n[1] <= roadSize && n[2] <= roadSize }, neighbors))
 }
 
 nodesEqual <- function(n1=c(-1,-1), n2=c(-1,-1)) {
-  if (debug) {
-    print(paste("eq", n1, n2, class(n1), class(n2), sep=","))
-  }
+  # if (debug) {
+  #   print(paste("eq", n1, n2, class(n1), class(n2), sep=","))
+  # }
 
   if (is.null(n1)) {
     n1 = c(-1, -1)
@@ -95,8 +98,6 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
   # BEGIN LOOP ------------------------------------------------------------
   while(length(gScore) > 0) {
     current = leastCostInFrontier(frontier, fScore)
-    # print(current)
-    # print(goal)
     if (nodesEqual(current, goal)) {
       # append final move to path
       return (cameFrom)
@@ -109,7 +110,7 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
     # add to visited list
     visited = append(visited, curKey)
 
-    neighbors = getNeighborNodes(current, dim(roads$hroads))
+    neighbors = getNeighborNodes(current, max(dim(roads$hroads)))
     for (i in names(neighbors)) {
       neighbor = neighbors[[i]]
       neighborKey = nodeKey(neighbor)
@@ -179,12 +180,8 @@ constructNumericalPath <- function(paths, start, end) {
 }
 
 ourDeliveryMan <- function(roads, car, packages) {
-  if (debug) {
-    # print(roads)
-    # print(packages)
-  }
-
-  if (is.null(car$mem$directions) || length(car$mem$directions) == 0) {
+  if (car$mem$prevLoad != car$load ||
+    is.null(car$mem$directions) || length(car$mem$directions) == 0) {
     # no packages
     if (car$load == 0) {
       # find an undelivered package and go to it
@@ -202,7 +199,8 @@ ourDeliveryMan <- function(roads, car, packages) {
     # deliver package
     } else {
       # get current pacakge
-      package = car$mem$package
+      package = packages[car$load,]
+      car$mem$package = package
       start = c(car$x, car$y)
       # find path to delivery destination
       end = c(package[3], package[4])
@@ -211,15 +209,17 @@ ourDeliveryMan <- function(roads, car, packages) {
     }
   }
 
-  if (is.null(tail(car$mem$directions, -1))) {
-    car$mem$directions = NULL
-    return (car)
-  }
   car$nextMove = head(car$mem$directions, 1)
   car$mem$directions = tail(car$mem$directions, -1)
+  car$mem$prevLoad = car$load
   if (debug) {
-    print(paste("x,y:", car$x, car$y, "nextMove:", car$nextMove, sep=" "))
+    print(paste("x,y:", car$x, car$y,
+      "nextMove:", car$nextMove,
+      "load", car$load,
+      "destination", car$mem$package[3], car$mem$package[4], sep=" "))
     print(car$mem$directions)
+    # print(roads)
+    # print(packages)
   }
   return (car)
 }
