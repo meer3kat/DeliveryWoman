@@ -179,23 +179,41 @@ constructNumericalPath <- function(paths, start, end) {
   return (rev(numPath))
 }
 
+closestUndeliveredPackage <- function(roads, pos, packages) {
+  packageIndex = 0
+  minDistance = Inf
+  for (i in which(packages[,5] == 0)) {
+    package = packages[i,]
+    dist = manhattanCost(roads, pos, c(package[1], package[2]))
+    if (dist < minDistance) {
+      minDistance = dist
+      packageIndex = i
+    }
+  }
+
+  if (packageIndex == 0) {
+    return (NULL)
+  }
+
+  return (packages[packageIndex,])
+}
+
 ourDeliveryMan <- function(roads, car, packages) {
   if (car$mem$prevLoad != car$load ||
     is.null(car$mem$directions) || length(car$mem$directions) == 0) {
     # no packages
     if (car$load == 0) {
-      # find an undelivered package and go to it
-      for (i in 1:length(packages[,1])) {
-        if (packages[i,5] == 0) {
-          package = packages[i,]
-          start = c(car$x, car$y)
-          end = c(package[1], package[2])
-          car$mem$package = package
-          paths = aStarSearch(roads, start, end)
-          car$mem$directions = constructNumericalPath(paths, start, end)
-          break
-        }
+      # find the closest undelivered pacakge and go to it.
+      start = c(car$x, car$y)
+      package = closestUndeliveredPackage(roads, start, packages)
+      if (is.null(package)) {
+        print("No closest package? How did we get here.")
+        return (0)
       }
+      end = c(package[1], package[2])
+      car$mem$package = package
+      paths = aStarSearch(roads, start, end)
+      car$mem$directions = constructNumericalPath(paths, start, end)
     # deliver package
     } else {
       # get current pacakge
@@ -212,6 +230,12 @@ ourDeliveryMan <- function(roads, car, packages) {
   car$nextMove = head(car$mem$directions, 1)
   car$mem$directions = tail(car$mem$directions, -1)
   car$mem$prevLoad = car$load
+
+  if (is.null(car$nextMove)) {
+    print(paste("nextMove:", car$nextMove, sep=" "))
+    print(car$mem$directions)
+  }
+
   if (debug) {
     print(paste("x,y:", car$x, car$y,
       "nextMove:", car$nextMove,
@@ -224,14 +248,13 @@ ourDeliveryMan <- function(roads, car, packages) {
   return (car)
 }
 
-benchmarkTurns <- function() {
+benchmarkTurns <- function(size=5) {
   sum = 0
-  size = 5
   for (i in 1:size) {
     sum = sum + runDeliveryMan(carReady=ourDeliveryMan, doPlot=F)
   }
 
-  print(paste("Average turns:", sum / size, "over", size, "runs." sep=" "))
+  print(paste("Average turns:", sum / size, "over", size, "runs.", sep=" "))
 }
 
-runDeliveryMan(carReady=ourDeliveryMan, doPlot=F)
+#runDeliveryMan(carReady=ourDeliveryMan, doPlot=F)
