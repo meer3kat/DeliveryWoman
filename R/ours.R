@@ -63,14 +63,7 @@ getNeighborNodes <- function(pos, roadSize) {
     n[1] <= roadSize && n[2] <= roadSize }, neighbors))
 }
 
-nodesEqual <- function(n1=c(-1,-1), n2=c(-1,-1)) {
-  # if (debug) {
-  #   print(paste("eq", n1, n2, class(n1), class(n2), sep=","))
-  # }
-
-  if (is.null(n1)) {
-    n1 = c(-1, -1)
-  }
+nodesEqual <- function(n1, n2) {
   return (n1[1] == n2[1] && n1[2] == n2[2])
 }
 
@@ -207,7 +200,7 @@ ourDeliveryMan <- function(roads, car, packages) {
       start = c(car$x, car$y)
       package = closestUndeliveredPackage(roads, start, packages)
       if (is.null(package)) {
-        print("No closest package? How did we get here.")
+        print("No closest package. How did we get here?")
         return (0)
       }
       end = c(package[1], package[2])
@@ -232,8 +225,7 @@ ourDeliveryMan <- function(roads, car, packages) {
   car$mem$prevLoad = car$load
 
   if (is.null(car$nextMove)) {
-    print(paste("nextMove:", car$nextMove, sep=" "))
-    print(car$mem$directions)
+    car$nextMove = 5
   }
 
   if (debug) {
@@ -249,12 +241,21 @@ ourDeliveryMan <- function(roads, car, packages) {
 }
 
 benchmarkTurns <- function(size=5) {
+  min = Inf
+  max = 0
   sum = 0
   for (i in 1:size) {
-    sum = sum + runDeliveryMan(carReady=ourDeliveryMan, doPlot=F)
+    turns = runDeliveryMan(carReady=ourDeliveryMan, doPlot=F, pause=0)
+    if (turns > max) {
+      max = turns
+    } else if (turns < min) {
+      min = turns
+    }
+    sum = sum + turns
   }
 
   print(paste("Average turns:", sum / size, "over", size, "runs.", sep=" "))
+  print(paste("Min:", min, "Max:", max, sep=" "))
 }
 
 #runDeliveryMan(carReady=ourDeliveryMan, doPlot=F)
