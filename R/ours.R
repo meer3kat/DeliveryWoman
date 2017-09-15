@@ -2,13 +2,26 @@ debug = F
 nodeKeySep = "_"
 
 findTurnCost <- function(roadSet, start, end) {
+  if (start == end) {
+    return (0)
+  }
+  start = min(start, length(roadSet))
+  end = min(start, length(roadSet))
   return (sum(roadSet[start:end]))
 }
 
 manhattanCost <- function(roads, start, goal) {
-  retX = findTurnCost(roads$hroads, start[1], goal[1])
-  retY = findTurnCost(roads$vroads, start[2], goal[2])
-  return (retX + retY)
+  # check turn cost of both paths of manhattan distance.
+  over_up = findTurnCost(roads$hroads[start[1],], start[1], goal[1]) +
+            findTurnCost(roads$vroads[,goal[2]], start[2], goal[2])
+  up_over = findTurnCost(roads$vroads[,start[2]], start[2], goal[2]) +
+            findTurnCost(roads$hroads[goal[1],], start[1], goal[1])
+  # print(paste("up_over:", up_over, "___ over_up:", over_up, sep=" "))
+  return (min(over_up, up_over))
+}
+
+averageRoadCondition <- function(roads) {
+  return (mean(roads$hroads) + mean(roads$vroads))
 }
 
 # UNUSED
@@ -258,4 +271,4 @@ benchmarkTurns <- function(size=5) {
   print(paste("Min:", min, "Max:", max, sep=" "))
 }
 
-#runDeliveryMan(carReady=ourDeliveryMan, doPlot=F)
+runDeliveryMan(carReady=ourDeliveryMan, doPlot=F, pause=0)
