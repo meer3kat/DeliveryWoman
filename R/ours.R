@@ -1,6 +1,8 @@
 debug = F
 nodeKeySep = "_"
 
+# ------ Heuristic functions -----
+
 findTurnCost <- function(roadSet, start, end) {
   if (start == end) {
     return (0)
@@ -24,33 +26,6 @@ averageRoadCondition <- function(roads) {
   return (mean(roads$hroads) + mean(roads$vroads))
 }
 
-# UNUSED
-# given roads and position finds the lowest path to the next node
-leastCostToNextNode <- function(roads, pos, prev) {
-  nodes = list(left=roads$hroads[pos[1]] - 1,
-    right=roads$hroads[pos[1]] + 1,
-    up=roads$vroads[pos[2]] + 1,
-    down=roads$vroads[pos[2]]-1
-  )
-  minPath = Inf
-  pathKey = ""
-  for (i in names(nodes)) {
-    # some of these values may be "off road" and thus null
-    if (is.element(i, names(nodes)) && nodes[i] < minPath) {
-      minPath = nodes[i]
-      pathKey = i
-    }
-  }
-
-  switch(pathKey,
-    left={ return (c(nodes[i], pos[2])) },
-    right={ return (c(nodes[i], pos[2])) },
-    up={ return (c(pos[1], nodes[i])) },
-    down={ return (c(pos[1], nodes[i])) },
-    { print("something went wrong finding leastCostToNextNode") }
-  )
-}
-
 leastCostInFrontier <- function(frontier, fScore) {
   minPath = Inf
   pathKey = ""
@@ -64,6 +39,8 @@ leastCostInFrontier <- function(frontier, fScore) {
   # print(names(frontier))
   return (frontier[[pathKey]])
 }
+
+# ------ A* functions -----
 
 getNeighborNodes <- function(pos, roadSize) {
   neighbors = list(left=c(pos[1] - 1, pos[2]),
@@ -185,7 +162,11 @@ constructNumericalPath <- function(paths, start, end) {
   return (rev(numPath))
 }
 
-closestUndeliveredPackage <- function(roads, pos, packages) {
+# ------ Package strategies -----
+# for abstraction, functions must take args: (roads, pos, packages)
+
+# returns the closest package given a position
+closestPackage <- function(roads, pos, packages) {
   packageIndex = 0
   minDistance = Inf
   for (i in which(packages[,5] == 0)) {
@@ -204,16 +185,70 @@ closestUndeliveredPackage <- function(roads, pos, packages) {
   return (packages[packageIndex,])
 }
 
-ourDeliveryMan <- function(roads, car, packages) {
+# get farthest package
+farthestPackage <- function(roads, pos, packages) {
+  packageIndex = 0
+  minDistance = -Inf
+  for (i in which(packages[,5] == 0)) {
+    package = packages[i,]
+    dist = manhattanCost(roads, pos, c(package[1], package[2]))
+    if (dist > minDistance) {
+      minDistance = dist
+      packageIndex = i
+    }
+  }
+
+  if (packageIndex == 0) {
+    return (NULL)
+  }
+
+  return (packages[packageIndex,])
+}
+
+# get package with longest delivery path
+packageWithLongestPath <- function(roads, pos, packages) {
+  package = NULL
+  maxDistance = -Inf
+  for (i in which(packages[,5] == 0)) {
+    tmpPackage = packages[i,]
+    dist = manhattanCost(roads, c(tmpPackage[1], tmpPackage[2]), c(tmpPackage[3], tmpPackage[4]))
+    if (dist > maxDistance) {
+      maxDistance = dist
+      package = packages[i,]
+    }
+  }
+  return (package)
+}
+
+# Stub
+closestPackageWithLongestPath <- function(roads, pos, packages) {
+  return (NULL)
+}
+
+# get random package
+randomPackage <- function(roads, pos, packages) {
+  packageIndex = sample(which(packages[,5] == 0))[1]
+  return (packages[packageIndex,])
+}
+
+# ----- Our DeliveryMan -----
+ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, firstPackageFn=NULL) {
   if (car$mem$prevLoad != car$load ||
     is.null(car$mem$directions) || length(car$mem$directions) == 0) {
     # no packages
     if (car$load == 0) {
-      # find the closest undelivered pacakge and go to it.
+      # find the closest undelivered package and go to it.
       start = c(car$x, car$y)
-      package = closestUndeliveredPackage(roads, start, packages)
+      package = NULL
+      # print(averageRoadCondition(roads)) => usually hits 8 by the 5th package.
+      if (!is.null(firstPackageFn) && averageRoadCondition(roads) <= 3) {
+        package = firstPackageFn(roads, start, packages)
+      } else {
+        package = findPackageFn(roads, start, packages)
+      }
+      # package = randomPackage(packages)
       if (is.null(package)) {
-        print("No closest package. How did we get here?")
+        print("No closest package How did we get here?")
         return (0)
       }
       end = c(package[1], package[2])
@@ -222,7 +257,7 @@ ourDeliveryMan <- function(roads, car, packages) {
       car$mem$directions = constructNumericalPath(paths, start, end)
     # deliver package
     } else {
-      # get current pacakge
+      # get current package
       package = packages[car$load,]
       car$mem$package = package
       start = c(car$x, car$y)
@@ -253,11 +288,12 @@ ourDeliveryMan <- function(roads, car, packages) {
   return (car)
 }
 
-benchmarkTurns <- function(size=5) {
+benchmarkTurns <- function(size=5, say=F, print=T) {
   min = Inf
   max = 0
   sum = 0
   for (i in 1:size) {
+    # print(paste("-> ", i))
     turns = runDeliveryMan(carReady=ourDeliveryMan, doPlot=F, pause=0)
     if (turns > max) {
       max = turns
@@ -267,8 +303,18 @@ benchmarkTurns <- function(size=5) {
     sum = sum + turns
   }
 
-  print(paste("Average turns:", sum / size, "over", size, "runs.", sep=" "))
-  print(paste("Min:", min, "Max:", max, sep=" "))
+  result = (sum / size)
+  if (print) {
+    print(paste("Average turns:", result, "over", size, "runs.", sep=" "))
+    print(paste("Min:", min, "Max:", max, sep=" "))
+  }
+
+  # for long benchmarks, a Mac can literally say when it's done!
+  if (say && Sys.info()['sysname'] == "Darwin") {
+    system(paste("say 'Benchmark of ", size, "runs complete, with an average of", result, "turns.'", sep=" "))
+  }
+
+  return (result)
 }
 
 runDeliveryMan(carReady=ourDeliveryMan, doPlot=F, pause=0)
