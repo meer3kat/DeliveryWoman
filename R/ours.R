@@ -232,7 +232,7 @@ randomPackage <- function(roads, pos, packages) {
 }
 
 # ----- Our DeliveryMan -----
-ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, firstPackageFn=NULL) {
+ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, firstPackageFn=packageWithLongestPath) {
   if (car$mem$prevLoad != car$load ||
     is.null(car$mem$directions) || length(car$mem$directions) == 0) {
     # no packages
@@ -288,13 +288,18 @@ ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, f
   return (car)
 }
 
-benchmarkTurns <- function(size=5, say=F, print=T) {
+# Takes a size and functions for ourDeliveryMan, returns the average turns.
+# optionally this can print results and use MacOS' `say` command
+benchmarkTurns <- function(size=5, findFn=closestPackage, firstFn=NULL, say=F, print=T) {
   min = Inf
   max = 0
   sum = 0
   for (i in 1:size) {
     # print(paste("-> ", i))
-    turns = runDeliveryMan(carReady=ourDeliveryMan, doPlot=F, pause=0)
+    tmp_oDM = ourDeliveryMan
+    formals(tmp_oDM)$findPackageFn = findFn
+    formals(tmp_oDM)$firstPackageFn = firstFn
+    turns = runDeliveryMan(carReady=tmp_oDM, doPlot=F, pause=0)
     if (turns > max) {
       max = turns
     } else if (turns < min) {
@@ -315,6 +320,21 @@ benchmarkTurns <- function(size=5, say=F, print=T) {
   }
 
   return (result)
+}
+
+# with a list of packageFunctions, iterate over every combination of them in ourDeliveryMan
+benchmarkFunctions <- function(size=100) {
+  pFns = list(closestPackage=closestPackage,
+    farthestPackage=farthestPackage,
+    packageWithLongestPath=packageWithLongestPath,
+    randomPackage=randomPackage)
+  for (findFn in names(pFns)) {
+    print(paste("findFn:", findFn, "__________"))
+    for(firstFn in names(pFns)) {
+      result = benchmarkTurns(size=size, findFn=pFns[[findFn]], firstFn=pFns[[firstFn]], say=F, print=F)
+      print(paste("     ", firstFn, ":", result))
+    }
+  }
 }
 
 runDeliveryMan(carReady=ourDeliveryMan, doPlot=F, pause=0)
