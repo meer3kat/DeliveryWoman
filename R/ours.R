@@ -188,12 +188,12 @@ closestPackage <- function(roads, pos, packages) {
 # get farthest package
 farthestPackage <- function(roads, pos, packages) {
   packageIndex = 0
-  minDistance = -Inf
+  maxDistance = -1
   for (i in which(packages[,5] == 0)) {
     package = packages[i,]
     dist = manhattanCost(roads, pos, c(package[1], package[2]))
-    if (dist > minDistance) {
-      minDistance = dist
+    if (dist > maxDistance) {
+      maxDistance = dist
       packageIndex = i
     }
   }
@@ -333,13 +333,27 @@ benchmarkTurns <- function(size=5, findFn=closestPackage, firstFn=NULL, say=F, p
 benchmarkFunctions <- function(size=100) {
   pFns = list(closestPackage=closestPackage,
     farthestPackage=farthestPackage,
-    packageWithLongestPath=packageWithLongestPath,
-    randomPackage=randomPackage)
+    packageWithLongestPath=packageWithLongestPath)
+    #randomPackage=randomPackage) #not worth testing, doesn't always finish.
+  results = matrix(NA, nrow=length(pFns), ncol=length(pFns))
+  iter = 1
   for (findFn in names(pFns)) {
-    print(paste("findFn:", findFn, "__________"))
+    #print(paste("findFn:", findFn, "__________"))
+    currentResults = c()
     for(firstFn in names(pFns)) {
       result = benchmarkTurns(size=size, findFn=pFns[[findFn]], firstFn=pFns[[firstFn]], say=F, print=F)
-      print(paste("     ", firstFn, ":", result))
+      currentResults = append(currentResults, result)
+      #print(paste("     ", firstFn, ":", result))
+    }
+    results[iter,] = currentResults
+    iter = iter + 1
+  }
+
+  for (i in 1:length(pFns)) {
+    print(paste("findFn:", names(pFns)[i], "__________"))
+    row = results[i,]
+    for (j in 1:length(row)) {
+      print(paste("     ", names(pFns)[j], ":", row[j]))
     }
   }
 }
