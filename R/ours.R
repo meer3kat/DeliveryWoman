@@ -225,6 +225,11 @@ closestPackageWithLongestPath <- function(roads, pos, packages) {
   return (NULL)
 }
 
+# Stub
+medianPackage <- function(roads, pos, packages) {
+  return (NULL)
+}
+
 # get random package
 randomPackage <- function(roads, pos, packages) {
   packageIndex = sample(which(packages[,5] == 0))[1]
@@ -232,7 +237,7 @@ randomPackage <- function(roads, pos, packages) {
 }
 
 # ----- Our DeliveryMan -----
-ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, firstPackageFn=packageWithLongestPath) {
+ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, firstPackageFn=NULL) {
   if (car$mem$prevLoad != car$load ||
     is.null(car$mem$directions) || length(car$mem$directions) == 0) {
     # no packages
@@ -298,7 +303,9 @@ benchmarkTurns <- function(size=5, findFn=closestPackage, firstFn=NULL, say=F, p
     # print(paste("-> ", i))
     tmp_oDM = ourDeliveryMan
     formals(tmp_oDM)$findPackageFn = findFn
-    formals(tmp_oDM)$firstPackageFn = firstFn
+    if (!is.null(firstFn)) {
+      formals(tmp_oDM)$firstPackageFn = firstFn
+    }
     turns = runDeliveryMan(carReady=tmp_oDM, doPlot=F, pause=0)
     if (turns > max) {
       max = turns
