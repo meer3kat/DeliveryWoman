@@ -2,7 +2,10 @@ debug = F
 nodeKeySep = "_"
 
 # ------ Heuristic functions -----
+# arguments conform to a heuristic format (roads, start, end)
 
+#unused
+# finds the turn cost along a subset of row or column
 findTurnCost <- function(roadSet, start, end) {
   if (start == end) {
     return (0)
@@ -16,8 +19,9 @@ findTurnCost <- function(roadSet, start, end) {
   return (sum(roadSet[start:end]))
 }
 
+#unused
 manhattanCost <- function(roads, start, goal) {
-  # check turn cost of both paths of manhattan distance.
+  # check turn cost of both paths of a manhattan path.
   over_up = findTurnCost(roads$hroads[start[1],], start[1], goal[1]) +
             findTurnCost(roads$vroads[,goal[2]], start[2], goal[2])
   up_over = findTurnCost(roads$vroads[,start[2]], start[2], goal[2]) +
@@ -26,13 +30,17 @@ manhattanCost <- function(roads, start, goal) {
   return (min(over_up, up_over))
 }
 
+#unused
+averageRoadCondition <- function(roads) {
+  return (mean(roads$hroads) + mean(roads$vroads))
+}
+
+#USED
 manhattanDistance <- function(roads, start, goal) {
   return (abs(start[1] - goal[1]) + abs(start[2] - goal[2]))
 }
 
-averageRoadCondition <- function(roads) {
-  return (mean(roads$hroads) + mean(roads$vroads))
-}
+# ------ A* functions -----
 
 leastCostInFrontier <- function(frontier, fScore) {
   minPath = Inf
@@ -48,8 +56,6 @@ leastCostInFrontier <- function(frontier, fScore) {
   return (frontier[[pathKey]])
 }
 
-# ------ A* functions -----
-
 getNeighborNodes <- function(pos, roadSize) {
   neighbors = list(left=c(pos[1] - 1, pos[2]),
              right=c(pos[1] + 1, pos[2]),
@@ -59,6 +65,18 @@ getNeighborNodes <- function(pos, roadSize) {
   # keep x,y > 0, and x <= roadSize, y <= roadSize
   return (Filter(function(n) { n[1] > 0 && n[2] > 0 &&
     n[1] <= roadSize && n[2] <= roadSize }, neighbors))
+}
+
+costBetweenNodes <- function(roads, start, end) {
+  if (start[1] < end[1]) {
+    return (roads$hroads[end[2], start[1]]) # right
+  } else if (start[1] > end[1]) {
+    return (roads$hroads[end[2], end[1]]) # left
+  } else if (start[2] < end[2]) {
+    return (roads$vroads[start[2], end[1]]) # down
+  } else { # if (start[2] > end[2])
+    return (roads$vroads[end[2], end[1]]) # up
+  }
 }
 
 nodesEqual <- function(n1, n2) {
@@ -115,8 +133,8 @@ aStarSearch <- function(roads, start, goal, h=manhattanDistance) {
         frontier[[neighborKey]] = neighbor
       }
 
-      # The distance from start to a neighbor
-      tmp_gScore = gScore[[curKey]] + h(roads, current, neighbor)
+      # The distance from current to a neighbor
+      tmp_gScore = gScore[[curKey]] + costBetweenNodes(roads, current, neighbor)
 
       # This is not a better path.
       if (is.element(neighborKey, names(gScore)) &&
@@ -163,6 +181,7 @@ constructNumericalPath <- function(paths, start, end) {
   numPath = c()
   while (cur != startKey) {
     numPath = append(numPath, determineDirection(cur, paths[[cur]]))
+    if (debug) print(paste(cur, " -> ", paths[[cur]]))
     cur = paths[[cur]]
   }
   return (rev(numPath))
@@ -224,15 +243,13 @@ packageWithLongestPath <- function(roads, pos, packages) {
   return (packageIndex)
 }
 
-# get random package
-randomPackage <- function(roads, pos, packages) {
-  packageIndex = sample(which(packages[,5] == 0))[1]
-  return (packages[packageIndex,])
-}
-
 # ----- Our DeliveryMan -----
 ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, firstPackageFn=NULL) {
   start = c(car$x, car$y)
+  if (!is.null(car$mem$prevLoad) && car$mem$prevLoad != car$load) {
+    car$mem$target = NULL
+    if (debug) print(paste("current load", car$load, "________________"))
+  }
   # no package
   if (car$load == 0) {
     if (!is.null(car$mem$target)) {
@@ -267,8 +284,10 @@ ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, f
     car$mem$directions = constructNumericalPath(paths, start, end)
   }
 
+  if (debug) print(car$mem$directions)
   car$nextMove = head(car$mem$directions, 1)
-  car$mem$directions = tail(car$mem$directions, -1)
+  car$mem$prevLoad = car$load
+  # car$mem$directions = tail(car$mem$directions, -1)
 
   if (is.null(car$nextMove)) {
     car$nextMove = 5
