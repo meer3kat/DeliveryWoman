@@ -8,7 +8,7 @@ findTurnCost <- function(roadSet, start, end) {
     return (0)
   }
   start = min(start, length(roadSet))
-  end = min(start, length(roadSet))
+  end = min(end, length(roadSet))
   return (sum(roadSet[start:end]))
 }
 
@@ -108,9 +108,7 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
       }
 
       # The distance from start to a neighbor
-      dist = findTurnCost(roads$hroads, current[1], neighbor[1]) +
-        findTurnCost(roads$vroads, current[2], neighbor[2])
-      tmp_gScore = gScore[[curKey]] + dist
+      tmp_gScore = gScore[[curKey]] + h(roads, current, neighbor)
 
       # This is not a better path.
       if (is.integer(gScore[[neighborKey]]) &&
