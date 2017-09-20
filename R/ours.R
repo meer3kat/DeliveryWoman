@@ -26,7 +26,7 @@ manhattanCost <- function(roads, start, goal) {
   return (min(over_up, up_over))
 }
 
-manhattanDistance <- function(start, goal) {
+manhattanDistance <- function(roads, start, goal) {
   return (abs(start[1] - goal[1]) + abs(start[2] - goal[2]))
 }
 
@@ -39,7 +39,7 @@ leastCostInFrontier <- function(frontier, fScore) {
   pathKey = ""
   for (i in names(frontier)) {
     if (is.element(i, names(fScore)) && fScore[[i]] < minPath) {
-      minPath = fScore[i]
+      minPath = fScore[[i]]
       pathKey = i
     }
   }
@@ -119,15 +119,15 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
       tmp_gScore = gScore[[curKey]] + h(roads, current, neighbor)
 
       # This is not a better path.
-      if (is.integer(gScore[[neighborKey]]) &&
+      if (is.element(neighborKey, names(gScore)) &&
         tmp_gScore >= gScore[[neighborKey]]) {
         next
       }
 
       # This path is the best until now. Record it!
-      cameFrom[neighborKey] = curKey
-      gScore[neighborKey] = tmp_gScore
-      fScore[neighborKey] = tmp_gScore + h(roads, neighbor, goal)
+      cameFrom[[neighborKey]] = curKey
+      gScore[[neighborKey]] = tmp_gScore
+      fScore[[neighborKey]] = tmp_gScore + h(roads, neighbor, goal)
     }
   }
 
@@ -143,7 +143,7 @@ determineDirection <- function(from, to) {
   # return the REVERSE direction of `from` to `to`
   if (toV[1] > fromV[1]) {
     return (4)
-  } else if ( toV[1] < fromV[1]) {
+  } else if (toV[1] < fromV[1]) {
     return (6)
   } else if (toV[2] > fromV[2]) {
     return (2)
@@ -153,7 +153,7 @@ determineDirection <- function(from, to) {
 }
 
 # given paths: list("1_1"="1_0", "1_0"="0_0")
-# start: "0_0"
+# start: "1_0"
 # end  : "1_1"
 # -> c(6, 8)
 constructNumericalPath <- function(paths, start, end) {
@@ -183,12 +183,10 @@ closestPackage <- function(roads, pos, packages) {
       packageIndex = i
     }
   }
-
   if (packageIndex == 0) {
     return (NULL)
   }
-
-  return (packages[packageIndex,])
+  return (packageIndex)
 }
 
 # get farthest package
@@ -208,22 +206,22 @@ farthestPackage <- function(roads, pos, packages) {
     return (NULL)
   }
 
-  return (packages[packageIndex,])
+  return (packageIndex)
 }
 
 # get package with longest delivery path
 packageWithLongestPath <- function(roads, pos, packages) {
-  package = NULL
-  maxDistance = -Inf
+  packageIndex = NULL
+  maxDistance = 0
   for (i in which(packages[,5] == 0)) {
     tmpPackage = packages[i,]
     dist = manhattanCost(roads, c(tmpPackage[1], tmpPackage[2]), c(tmpPackage[3], tmpPackage[4]))
     if (dist > maxDistance) {
       maxDistance = dist
-      package = packages[i,]
+      packageIndex = i
     }
   }
-  return (package)
+  return (packageIndex)
 }
 
 # get random package
@@ -234,50 +232,34 @@ randomPackage <- function(roads, pos, packages) {
 
 # ----- Our DeliveryMan -----
 ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, firstPackageFn=NULL) {
-  # if (car$mem$prevLoad != car$load) {
-  #   # no packages
-    if (car$load == 0 && is.null(car$package)) {
-      # find the closest undelivered package and go to it.
-      start = c(car$x, car$y)
-      package = NULL
-      # print(averageRoadCondition(roads)) => usually hits 8 by the 5th package.
-      if (!is.null(firstPackageFn) && averageRoadCondition(roads) <= 3) {
-        package = firstPackageFn(roads, start, packages)
-      } else {
-        package = findPackageFn(roads, start, packages)
-      }
-      # package = randomPackage(packages)
-      if (is.null(package)) {
-        print("No closest package How did we get here?")
-        return (0)
-      }
-      end = c(package[1], package[2])
-      car$mem$package = package
-      paths = aStarSearch(roads, start, end)
-      car$mem$directions = constructNumericalPath(paths, start, end)
-    # deliver package
-    } else if (car$load == 0 && !is.null(car$package)) {
-      package = car$mem$package
-      start = c(car$x, car$y)
-      # find path to delivery destination
-      end = c(package[3], package[4])
-      paths = aStarSearch(roads, start, end)
-      car$mem$directions = constructNumericalPath(paths, start, end)
+  start = c(car$x, car$y)
+  # no package
+  if (car$load == 0) {
+    packageIndex = NULL
+    # print(averageRoadCondition(roads)) => usually hits 8 by the 5th package.
+    if (!is.null(firstPackageFn) && averageRoadCondition(roads) <= 3) {
+      packageIndex = firstPackageFn(roads, start, packages)
     } else {
-      # get current package
-      package = packages[car$load,]
-      car$mem$package = package
-      start = c(car$x, car$y)
-      # find path to delivery destination
-      end = c(package[3], package[4])
-      paths = aStarSearch(roads, start, end)
-      car$mem$directions = constructNumericalPath(paths, start, end)
+      packageIndex = findPackageFn(roads, start, packages)
     }
-  # }
+    package = packages[packageIndex,]
+    if (is.null(package)) {
+      print("No available package How did we get here?")
+      return (0)
+    }
+    end = c(package[1], package[2])
+    paths = aStarSearch(roads, start, end)
+    car$mem$directions = constructNumericalPath(paths, start, end)
+  # has package
+  } else {
+    package = packages[car$load,]
+    end = c(package[3], package[4])
+    paths = aStarSearch(roads, start, end)
+    car$mem$directions = constructNumericalPath(paths, start, end)
+  }
 
   car$nextMove = head(car$mem$directions, 1)
   car$mem$directions = tail(car$mem$directions, -1)
-  car$mem$prevLoad = car$load
 
   if (is.null(car$nextMove)) {
     car$nextMove = 5
@@ -287,7 +269,7 @@ ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, f
     print(paste("x,y:", car$x, car$y,
       "nextMove:", car$nextMove,
       "load", car$load,
-      "destination", car$mem$package[3], car$mem$package[4], sep=" "))
+      "destination", packages[car$load,3], packages[car$load,4], sep=" "))
     print(car$mem$directions)
     # print(roads)
     # print(packages)
