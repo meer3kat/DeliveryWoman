@@ -71,7 +71,7 @@ nodeKey <- function(node) {
 }
 
 # returns a list of moves to get to goal
-aStarSearch <- function(roads, start, goal, h=manhattanCost) {
+aStarSearch <- function(roads, start, goal, h=manhattanDistance) {
   startKey = nodeKey(start)
   visited = c() # list of visited nodes as keys
   frontier = list() # key:vector
@@ -177,7 +177,7 @@ closestPackage <- function(roads, pos, packages) {
   minDistance = Inf
   for (i in which(packages[,5] == 0)) {
     package = packages[i,]
-    dist = manhattanCost(roads, pos, c(package[1], package[2]))
+    dist = manhattanDistance(roads, pos, c(package[1], package[2]))
     if (dist < minDistance) {
       minDistance = dist
       packageIndex = i
@@ -195,7 +195,7 @@ farthestPackage <- function(roads, pos, packages) {
   maxDistance = -1
   for (i in which(packages[,5] == 0)) {
     package = packages[i,]
-    dist = manhattanCost(roads, pos, c(package[1], package[2]))
+    dist = manhattanDistance(roads, pos, c(package[1], package[2]))
     if (dist > maxDistance) {
       maxDistance = dist
       packageIndex = i
@@ -215,7 +215,7 @@ packageWithLongestPath <- function(roads, pos, packages) {
   maxDistance = 0
   for (i in which(packages[,5] == 0)) {
     tmpPackage = packages[i,]
-    dist = manhattanCost(roads, c(tmpPackage[1], tmpPackage[2]), c(tmpPackage[3], tmpPackage[4]))
+    dist = manhattanDistance(roads, c(tmpPackage[1], tmpPackage[2]), c(tmpPackage[3], tmpPackage[4]))
     if (dist > maxDistance) {
       maxDistance = dist
       packageIndex = i
