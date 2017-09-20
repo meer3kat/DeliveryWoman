@@ -7,8 +7,12 @@ findTurnCost <- function(roadSet, start, end) {
   if (start == end) {
     return (0)
   }
-  start = min(start, length(roadSet))
-  end = min(end, length(roadSet))
+  # Don't overestimate cost! We're traversing edges, not points.
+  if (start > end) {
+    start = start - 1
+  } else {
+    end = end - 1
+  }
   return (sum(roadSet[start:end]))
 }
 
@@ -20,6 +24,10 @@ manhattanCost <- function(roads, start, goal) {
             findTurnCost(roads$hroads[goal[1],], start[1], goal[1])
   # print(paste("up_over:", up_over, "___ over_up:", over_up, sep=" "))
   return (min(over_up, up_over))
+}
+
+manhattanDistance <- function(start, goal) {
+  return (abs(start[1] - goal[1]) + abs(start[2] - goal[2]))
 }
 
 averageRoadCondition <- function(roads) {
@@ -45,8 +53,8 @@ leastCostInFrontier <- function(frontier, fScore) {
 getNeighborNodes <- function(pos, roadSize) {
   neighbors = list(left=c(pos[1] - 1, pos[2]),
              right=c(pos[1] + 1, pos[2]),
-               up=c(pos[1], pos[2] + 1),
-            down=c(pos[1], pos[2] - 1)
+                up=c(pos[1], pos[2] + 1),
+              down=c(pos[1], pos[2] - 1)
   )
   # keep x,y > 0, and x <= roadSize, y <= roadSize
   return (Filter(function(n) { n[1] > 0 && n[2] > 0 &&
@@ -57,7 +65,7 @@ nodesEqual <- function(n1, n2) {
   return (n1[1] == n2[1] && n1[2] == n2[2])
 }
 
-# list(x=1, y=3) => '1 3'
+# list(x=1, y=3) => '1_3'
 nodeKey <- function(node) {
   return (paste(node[1], node[2], sep=nodeKeySep))
 }
@@ -79,7 +87,7 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
   fScore[startKey] = h(roads, start, goal)
 
   # BEGIN LOOP ------------------------------------------------------------
-  while(length(gScore) > 0) {
+  while(length(frontier) > 0) {
     current = leastCostInFrontier(frontier, fScore)
     if (nodesEqual(current, goal)) {
       # append final move to path
@@ -123,6 +131,7 @@ aStarSearch <- function(roads, start, goal, h=manhattanCost) {
     }
   }
 
+  print("some failure")
   return (5)
 }
 
@@ -156,7 +165,6 @@ constructNumericalPath <- function(paths, start, end) {
     numPath = append(numPath, determineDirection(cur, paths[[cur]]))
     cur = paths[[cur]]
   }
-
   return (rev(numPath))
 }
 
@@ -218,16 +226,6 @@ packageWithLongestPath <- function(roads, pos, packages) {
   return (package)
 }
 
-# Stub
-closestPackageWithLongestPath <- function(roads, pos, packages) {
-  return (NULL)
-}
-
-# Stub
-medianPackage <- function(roads, pos, packages) {
-  return (NULL)
-}
-
 # get random package
 randomPackage <- function(roads, pos, packages) {
   packageIndex = sample(which(packages[,5] == 0))[1]
@@ -236,10 +234,9 @@ randomPackage <- function(roads, pos, packages) {
 
 # ----- Our DeliveryMan -----
 ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, firstPackageFn=NULL) {
-  if (car$mem$prevLoad != car$load ||
-    is.null(car$mem$directions) || length(car$mem$directions) == 0) {
-    # no packages
-    if (car$load == 0) {
+  # if (car$mem$prevLoad != car$load) {
+  #   # no packages
+    if (car$load == 0 && is.null(car$package)) {
       # find the closest undelivered package and go to it.
       start = c(car$x, car$y)
       package = NULL
@@ -259,6 +256,13 @@ ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, f
       paths = aStarSearch(roads, start, end)
       car$mem$directions = constructNumericalPath(paths, start, end)
     # deliver package
+    } else if (car$load == 0 && !is.null(car$package)) {
+      package = car$mem$package
+      start = c(car$x, car$y)
+      # find path to delivery destination
+      end = c(package[3], package[4])
+      paths = aStarSearch(roads, start, end)
+      car$mem$directions = constructNumericalPath(paths, start, end)
     } else {
       # get current package
       package = packages[car$load,]
@@ -269,7 +273,7 @@ ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, f
       paths = aStarSearch(roads, start, end)
       car$mem$directions = constructNumericalPath(paths, start, end)
     }
-  }
+  # }
 
   car$nextMove = head(car$mem$directions, 1)
   car$mem$directions = tail(car$mem$directions, -1)
@@ -336,12 +340,12 @@ benchmarkFunctions <- function(size=100) {
   results = matrix(NA, nrow=length(pFns), ncol=length(pFns))
   iter = 1
   for (findFn in names(pFns)) {
-    #print(paste("findFn:", findFn, "__________"))
+    print(paste("findFn:", findFn, "__________"))
     currentResults = c()
     for(firstFn in names(pFns)) {
       result = benchmarkTurns(size=size, findFn=pFns[[findFn]], firstFn=pFns[[firstFn]], say=F, print=F)
       currentResults = append(currentResults, result)
-      #print(paste("     ", firstFn, ":", result))
+      print(paste("     ", firstFn, ":", result))
     }
     results[iter,] = currentResults
     iter = iter + 1
