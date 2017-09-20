@@ -7,7 +7,7 @@ findTurnCost <- function(roadSet, start, end) {
   if (start == end) {
     return (0)
   }
-  # Don't overestimate cost! We're traversing edges, not points.
+  # Don't overestimate cost! We're summing edges, not points.
   if (start > end) {
     start = start - 1
   } else {
@@ -235,23 +235,32 @@ ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, f
   start = c(car$x, car$y)
   # no package
   if (car$load == 0) {
-    packageIndex = NULL
-    # print(averageRoadCondition(roads)) => usually hits 8 by the 5th package.
-    if (!is.null(firstPackageFn) && averageRoadCondition(roads) <= 3) {
-      packageIndex = firstPackageFn(roads, start, packages)
+    if (!is.null(car$mem$target)) {
+      package = packages[car$mem$target,]
+      end = c(package[1], package[2])
+      paths = aStarSearch(roads, start, end)
+      car$mem$directions = constructNumericalPath(paths, start, end)
     } else {
-      packageIndex = findPackageFn(roads, start, packages)
+      packageIndex = NULL
+      # print(averageRoadCondition(roads)) => usually hits 8 by the 5th package.
+      if (!is.null(firstPackageFn) && averageRoadCondition(roads) <= 3) {
+        packageIndex = firstPackageFn(roads, start, packages)
+      } else {
+        packageIndex = findPackageFn(roads, start, packages)
+      }
+      package = packages[packageIndex,]
+      if (is.null(package)) {
+        print("No available package How did we get here?")
+        return (0)
+      }
+      car$mem$target = packageIndex
+      end = c(package[1], package[2])
+      paths = aStarSearch(roads, start, end)
+      car$mem$directions = constructNumericalPath(paths, start, end)
     }
-    package = packages[packageIndex,]
-    if (is.null(package)) {
-      print("No available package How did we get here?")
-      return (0)
-    }
-    end = c(package[1], package[2])
-    paths = aStarSearch(roads, start, end)
-    car$mem$directions = constructNumericalPath(paths, start, end)
   # has package
   } else {
+    car$mem$target = NULL
     package = packages[car$load,]
     end = c(package[3], package[4])
     paths = aStarSearch(roads, start, end)
