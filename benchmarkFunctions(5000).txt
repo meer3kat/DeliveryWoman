@@ -1,21 +1,17 @@
 > benchmarkFunctions(5000)
 [1] "findFn: closestPackage __________"
-[1] "      closestPackage : 244.4778"
-[1] "      farthestPackage : 257.4838"
-[1] "      packageWithLongestPath : 251.1944"
-[1] "      randomPackage : 252.2486"
+[1] "      closestPackage : 246.0358"
+[1] "      farthestPackage : 256.5552"
+[1] "      packageWithLongestPath : 253.9122"
 [1] "findFn: farthestPackage __________"
-[1] "      closestPackage : 262.256"
-[1] "      farthestPackage : 274.821"
-[1] "      packageWithLongestPath : 273.3452"
-[1] "      randomPackage : 272.847"
+[1] "      closestPackage : 262.5084"
+[1] "      farthestPackage : 275.4618"
+[1] "      packageWithLongestPath : 269.6464"
 [1] "findFn: packageWithLongestPath __________"
-[1] "      closestPackage : 256.7404"
-[1] "      farthestPackage : 269.2684"
-[1] "      packageWithLongestPath : 263.1418"
-[1] "      randomPackage : 264.8858"
-[1] "findFn: randomPackage __________"
-[1] "You failed to complete the task. Try again."
+[1] "      closestPackage : 255.4032"
+[1] "      farthestPackage : 269.9644"
+[1] "      packageWithLongestPath : 262.369"
 
+# Basic DM
 > sum=0; for (i in 1:5000) { sum = sum + runDeliveryMan(carReady=basicDM, pause=0, doPlot=F) }; sum / 5000
 [1] 265.1424
