@@ -1,41 +1,8 @@
 debug = F
 nodeKeySep = "_"
 
-# ------ Heuristic functions -----
-# arguments conform to a heuristic format (roads, start, end)
+# ------ Heuristics -----
 
-#unused
-# finds the turn cost along a subset of row or column
-findTurnCost <- function(roadSet, start, end) {
-  if (start == end) {
-    return (0)
-  }
-  # Don't overestimate cost! We're summing edges, not points.
-  if (start > end) {
-    start = start - 1
-  } else {
-    end = end - 1
-  }
-  return (sum(roadSet[start:end]))
-}
-
-#unused
-manhattanCost <- function(roads, start, goal) {
-  # check turn cost of both paths of a manhattan path.
-  over_up = findTurnCost(roads$hroads[start[1],], start[1], goal[1]) +
-            findTurnCost(roads$vroads[,goal[2]], start[2], goal[2])
-  up_over = findTurnCost(roads$vroads[,start[2]], start[2], goal[2]) +
-            findTurnCost(roads$hroads[goal[1],], start[1], goal[1])
-  # print(paste("up_over:", up_over, "___ over_up:", over_up, sep=" "))
-  return (min(over_up, up_over))
-}
-
-#unused
-averageRoadCondition <- function(roads) {
-  return (mean(roads$hroads) + mean(roads$vroads))
-}
-
-#USED
 manhattanDistance <- function(roads, start, goal) {
   return (abs(start[1] - goal[1]) + abs(start[2] - goal[2]))
 }
@@ -89,6 +56,8 @@ nodeKey <- function(node) {
 }
 
 # returns a list of moves to get to goal
+# adapted from psuedocode on:
+# https://en.wikipedia.org/w/index.php?title=A*_search_algorithm&oldid=801094177#Pseudocode
 aStarSearch <- function(roads, start, goal, h=manhattanDistance) {
   startKey = nodeKey(start)
   visited = c() # list of visited nodes as keys
@@ -187,62 +156,6 @@ constructNumericalPath <- function(paths, start, end) {
   return (rev(numPath))
 }
 
-# ------ Package strategies -----
-# for abstraction, functions must take args: (roads, pos, packages)
-
-# returns the closest package given a position
-closestPackage <- function(roads, pos, packages) {
-  packageIndex = 0
-  minDistance = Inf
-  for (i in which(packages[,5] == 0)) {
-    package = packages[i,]
-    dist = manhattanDistance(roads, pos, c(package[1], package[2]))
-    if (dist < minDistance) {
-      minDistance = dist
-      packageIndex = i
-    }
-  }
-  if (packageIndex == 0) {
-    return (NULL)
-  }
-  return (packageIndex)
-}
-
-# get farthest package
-farthestPackage <- function(roads, pos, packages) {
-  packageIndex = 0
-  maxDistance = -1
-  for (i in which(packages[,5] == 0)) {
-    package = packages[i,]
-    dist = manhattanDistance(roads, pos, c(package[1], package[2]))
-    if (dist > maxDistance) {
-      maxDistance = dist
-      packageIndex = i
-    }
-  }
-
-  if (packageIndex == 0) {
-    return (NULL)
-  }
-
-  return (packageIndex)
-}
-
-# get package with longest delivery path
-packageWithLongestPath <- function(roads, pos, packages) {
-  packageIndex = NULL
-  maxDistance = 0
-  for (i in which(packages[,5] == 0)) {
-    tmpPackage = packages[i,]
-    dist = manhattanDistance(roads, c(tmpPackage[1], tmpPackage[2]), c(tmpPackage[3], tmpPackage[4]))
-    if (dist > maxDistance) {
-      maxDistance = dist
-      packageIndex = i
-    }
-  }
-  return (packageIndex)
-}
-
 # n as a as number of packages, returns all permutations of indexes.
 # from https://stackoverflow.com/a/20199902
 permutations <- function(n){
@@ -284,7 +197,7 @@ travelingSalesmanPackageOrder <- function(roads, pos, packages) {
 }
 
 # ----- Our DeliveryMan -----
-ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, firstPackageFn=NULL) {
+ourDeliveryMan <- function(roads, car, packages) {
   start = c(car$x, car$y)
   if (!is.null(car$mem$prevLoad) && car$mem$prevLoad != car$load) {
     car$mem$target = NULL
@@ -390,35 +303,6 @@ benchmarkTurns <- function(size=5, findFn=closestPackage, firstFn=NULL, say=F, p
   }
 
   return (result)
-}
-
-# with a list of packageFunctions, iterate over every combination of them in ourDeliveryMan
-benchmarkFunctions <- function(size=100) {
-  pFns = list(closestPackage=closestPackage,
-    farthestPackage=farthestPackage,
-    packageWithLongestPath=packageWithLongestPath)
-    #randomPackage=randomPackage) #not worth testing, doesn't always finish.
-  results = matrix(NA, nrow=length(pFns), ncol=length(pFns))
-  iter = 1
-  for (findFn in names(pFns)) {
-    print(paste("findFn:", findFn, "__________"))
-    currentResults = c()
-    for(firstFn in names(pFns)) {
-      result = benchmarkTurns(size=size, findFn=pFns[[findFn]], firstFn=pFns[[firstFn]], say=F, print=F)
-      currentResults = append(currentResults, result)
-      print(paste("     ", firstFn, ":", result))
-    }
-    results[iter,] = currentResults
-    iter = iter + 1
-  }
-
-  for (i in 1:length(pFns)) {
-    print(paste("findFn:", names(pFns)[i], "__________"))
-    row = results[i,]
-    for (j in 1:length(row)) {
-      print(paste("     ", names(pFns)[j], ":", row[j]))
-    }
-  }
 }
 
 runDeliveryMan(carReady=ourDeliveryMan, doPlot=F, pause=0)
