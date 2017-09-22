@@ -250,7 +250,6 @@ ourDeliveryMan <- function(roads, car, packages) {
   if (debug) print(car$mem$directions)
   car$nextMove = head(car$mem$directions, 1)
   car$mem$prevLoad = car$load
-  # car$mem$directions = tail(car$mem$directions, -1)
 
   if (is.null(car$nextMove)) {
     car$nextMove = 5
@@ -271,23 +270,18 @@ ourDeliveryMan <- function(roads, car, packages) {
 
 # Takes a size and functions for ourDeliveryMan, returns the average turns.
 # optionally this can print results and use MacOS' `say` command
-benchmarkTurns <- function(size=5, findFn=closestPackage, firstFn=NULL, say=F, print=T) {
+benchmarkTurns <- function(size=5, say=F, print=T) {
   min = Inf
   max = 0
   sum = 0
   for (i in 1:size) {
-    # print(paste("-> ", i))
-    tmp_oDM = ourDeliveryMan
-    formals(tmp_oDM)$findPackageFn = findFn
-    if (!is.null(firstFn)) {
-      formals(tmp_oDM)$firstPackageFn = firstFn
-    }
-    turns = runDeliveryMan(carReady=tmp_oDM, doPlot=F, pause=0)
+    turns = runDeliveryMan(carReady=ourDeliveryMan, doPlot=F, pause=0)
     if (turns > max) {
       max = turns
     } else if (turns < min) {
       min = turns
     }
+    #print(turns)
     sum = sum + turns
   }
 
@@ -299,7 +293,7 @@ benchmarkTurns <- function(size=5, findFn=closestPackage, firstFn=NULL, say=F, p
 
   # for long benchmarks, a Mac can literally say when it's done!
   if (say && Sys.info()['sysname'] == "Darwin") {
-    system(paste("say 'Benchmark of ", size, "runs complete, with an average of", result, "turns.'", sep=" "))
+    system(paste("say 'Benchmark of ", size, "runs complete, with an average of", result, "turns.' &", sep=" "))
   }
 
   return (result)
