@@ -181,7 +181,7 @@ constructNumericalPath <- function(paths, start, end) {
   numPath = c()
   while (cur != startKey) {
     numPath = append(numPath, determineDirection(cur, paths[[cur]]))
-    if (debug) print(paste(cur, " -> ", paths[[cur]]))
+    # if (debug) print(paste(cur, " -> ", paths[[cur]]))
     cur = paths[[cur]]
   }
   return (rev(numPath))
@@ -243,32 +243,82 @@ packageWithLongestPath <- function(roads, pos, packages) {
   return (packageIndex)
 }
 
+# n as a as number of packages, returns all permutations of indexes.
+# from https://stackoverflow.com/a/20199902
+permutations <- function(n){
+  if(n == 1){
+    return (matrix(1))
+} else {
+    sub = permutations(n-1)
+    p = nrow(sub)
+    A = matrix(nrow=n*p,ncol=n)
+    for(i in 1:n){
+      A[(i-1) * p+1 :p,] = cbind(i, sub + (sub >= i))
+    }
+    return (A)
+  }
+}
+
+travelingSalesmanPackageOrder <- function(roads, pos, packages) {
+  bestDistance = Inf
+  bestPath = c()
+  perms = permutations(nrow(packages))
+  for (i in 1:dim(perms)[1]) {
+    distance = 0
+    start = pos
+    # for each index in routePermutations, calculate the total distance
+    for (j in perms[i,]) {
+      package = packages[j,]
+      distance = distance +
+        manhattanDistance(roads, start, package[1:2]) +
+        manhattanDistance(roads, package[1:2], package[3:4])
+      start = package[3:4]
+    }
+    if (distance < bestDistance) {
+      bestDistance = distance
+      bestPath = perms[i,]
+    }
+  }
+  if (debug) print(paste("Best distance:", bestDistance))
+  return (bestPath)
+}
+
 # ----- Our DeliveryMan -----
 ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, firstPackageFn=NULL) {
   start = c(car$x, car$y)
   if (!is.null(car$mem$prevLoad) && car$mem$prevLoad != car$load) {
     car$mem$target = NULL
+    if (length(setdiff(car$mem$order, car$load) > 0)) {
+      car$mem$order = setdiff(car$mem$order, car$load)
+    }
     if (debug) print(paste("current load", car$load, "________________"))
   }
   # no package
   if (car$load == 0) {
+    # has a target in mem
     if (!is.null(car$mem$target)) {
       package = packages[car$mem$target,]
       end = c(package[1], package[2])
       paths = aStarSearch(roads, start, end)
       car$mem$directions = constructNumericalPath(paths, start, end)
+    # no target
     } else {
       packageIndex = NULL
       # print(averageRoadCondition(roads)) => usually hits 8 by the 5th package.
-      if (!is.null(firstPackageFn) && averageRoadCondition(roads) <= 3) {
-        packageIndex = firstPackageFn(roads, start, packages)
-      } else {
-        packageIndex = findPackageFn(roads, start, packages)
+      if (is.null(car$mem$order)) {
+        car$mem$order = travelingSalesmanPackageOrder(roads, start, packages)
+        if (debug) print(car$mem$order)
       }
+      packageIndex = car$mem$order[1]
       package = packages[packageIndex,]
       if (is.null(package)) {
         print("No available package How did we get here?")
         return (0)
+      # sometimes we deliver packages and don't remove them from the mem$order?
+      } else if (package[5] != 0) {
+        packageIndex = car$mem$order[2]
+        package = packages[packageIndex,]
+        car$mem$order = tail(car$mem$order, -1)
       }
       car$mem$target = packageIndex
       end = c(package[1], package[2])
@@ -296,11 +346,12 @@ ourDeliveryMan <- function(roads, car, packages, findPackageFn=closestPackage, f
   if (debug) {
     print(paste("x,y:", car$x, car$y,
       "nextMove:", car$nextMove,
+      "target", car$mem$target,
       "load", car$load,
       "destination", packages[car$load,3], packages[car$load,4], sep=" "))
     print(car$mem$directions)
+    print(car$mem$order)
     # print(roads)
-    # print(packages)
   }
   return (car)
 }
