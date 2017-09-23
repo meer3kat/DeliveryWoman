@@ -1,3 +1,9 @@
+"""
+Group 66
+AI Lab 1 - DeliveryMan
+carReady function is `ourDeliveryMan`
+"""
+
 debug = F
 nodeKeySep = "_"
 
@@ -304,4 +310,4 @@ benchmarkTurns <- function(size=5, say=F, print=T, plot=F) {
   return (result)
 }
 
-runDeliveryMan(carReady=ourDeliveryMan, doPlot=F, pause=0)
+# runDeliveryMan(carReady=ourDeliveryMan, doPlot=F, pause=0)
