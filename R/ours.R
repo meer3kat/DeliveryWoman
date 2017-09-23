@@ -270,10 +270,10 @@ ourDeliveryMan <- function(roads, car, packages) {
 
 # Takes a size and functions for ourDeliveryMan, returns the average turns.
 # optionally this can print results and use MacOS' `say` command
-benchmarkTurns <- function(size=5, say=F, print=T) {
+benchmarkTurns <- function(size=5, say=F, print=T, plot=F) {
   min = Inf
+  allTurns = c()
   max = 0
-  sum = 0
   for (i in 1:size) {
     turns = runDeliveryMan(carReady=ourDeliveryMan, doPlot=F, pause=0)
     if (turns > max) {
@@ -282,10 +282,10 @@ benchmarkTurns <- function(size=5, say=F, print=T) {
       min = turns
     }
     #print(turns)
-    sum = sum + turns
+    allTurns = append(allTurns, turns)
   }
 
-  result = (sum / size)
+  result = mean(allTurns)
   if (print) {
     print(paste("Average turns:", result, "over", size, "runs.", sep=" "))
     print(paste("Min:", min, "Max:", max, sep=" "))
@@ -294,6 +294,11 @@ benchmarkTurns <- function(size=5, say=F, print=T) {
   # for long benchmarks, a Mac can literally say when it's done!
   if (say && Sys.info()['sysname'] == "Darwin") {
     system(paste("say 'Benchmark of ", size, "runs complete, with an average of", result, "turns.' &", sep=" "))
+  }
+
+  if (plot) {
+    hist(allTurns, main=paste("Histogram of turns over", size, "runs", sep=" "),
+      xlab="Number of turns", ylab="Frequency")
   }
 
   return (result)
