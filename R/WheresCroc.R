@@ -4,6 +4,25 @@ randomWC=function(moveInfo,readings,positions,edges,probs) {
   return(moveInfo)
 }
 
+#transition matrix
+#function get transition matrix and then write individual values in it. 
+getTransitionMatrix=function(point,edges){
+  edges=getEdges()
+  points=getPoints()
+  A=matrix(0,nrow=40,ncol=40)
+  
+  for( k in 1:nrow(A)){
+    options=getOptions(k,edges)
+    transitionP=1/length(options)
+    
+    for (j in 1:length(options)){
+      A[k,options[j]] = transitionP
+    }
+  }
+  
+  return (A)
+}
+
 #' @export
 manualWC=function(moveInfo,readings,positions,edges,probs) {
   options=getOptions(positions[3],edges)
