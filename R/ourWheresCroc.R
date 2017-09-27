@@ -6,6 +6,10 @@ for each turn
   go to hole, search.
 '''
 
+#initial state just randomly guess where my croc is
+initials=c(rep(0.025,40))
+print(initials)
+
 
 #transition matrix
 #function get transition matrix and then write individual values in it. 
@@ -39,3 +43,7 @@ for (j in 1:40){
   propoh[j]=dnorm(readings[3],probs$phosphate[j,1],probs$phosphate[j,2])
   protot[j]=prosal[j]*pronit[j]*propoh[j]
 }
+
+#normallize our protot 
+protot=normalize(protot)
+print(proto)
