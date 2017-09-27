@@ -6,13 +6,13 @@ for each turn
   go to hole, search.
 '''
 
-#initial state just randomly guess where my croc is
+#initial state just randomly guess where my croc is. that is 0.025 chance in each water hole. 
 initials=c(rep(0.025,40))
 print(initials)
 
 
 #transition matrix
-#function get transition matrix and then write individual values in it. 
+#function get transition matrix and then write individual values in it. return our transition matrix A
 getTransitionMatrix=function(point,edges){
   edges=getEdges()
   points=getPoints()
@@ -31,7 +31,7 @@ getTransitionMatrix=function(point,edges){
 }
 
 #creating vector for store probability of S, N, P
-prosal= c(rep(0,40))
+prosal=c(rep(0,40))
 pronit=c(rep(0,40))
 propoh=c(rep(0,40))
 protot=c(rep(0,40))
@@ -44,6 +44,10 @@ for (j in 1:40){
   protot[j]=prosal[j]*pronit[j]*propoh[j]
 }
 
-#normallize our protot 
-protot=normalize(protot)
-print(proto)
+#normallize our probability so that the total probability is 1. 
+protot=protot/sum(protot)
+
+#transit our initial state using the transition matrix and multiply the probability. so we get the probability of croc is in that water whole
+afterobs=initials%*%getTransitionMatrix()*protot
+print(afterobs)
+
