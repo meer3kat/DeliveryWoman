@@ -4,6 +4,14 @@ randomWC=function(moveInfo,readings,positions,edges,probs) {
   return(moveInfo)
 }
 
+#initial state just randomly guess where my croc is. that is 0.025 chance in each water hole. 
+initials=c(rep(0.025,40))
+
+
+
+
+
+
 #transition matrix
 #function get transition matrix and then write individual values in it. 
 getTransitionMatrix=function(point,edges){
@@ -11,21 +19,67 @@ getTransitionMatrix=function(point,edges){
   points=getPoints()
   A=matrix(0,nrow=40,ncol=40)
   
-  for( k in 1:nrow(A)){
+  for( k in 1:ncol(A)){
     options=getOptions(k,edges)
     transitionP=1/length(options)
     
     for (j in 1:length(options)){
-      A[k,options[j]] = transitionP
+      A[options[j],k] = transitionP
     }
   }
   
   return (A)
 }
 
+
 #' @export
 manualWC=function(moveInfo,readings,positions,edges,probs) {
+ 
+  #---------------------test run-----------
+    #creating vector for store probability of S, N, P
+  print('positions')
+  print(positions)
+  
+
+
+  
+  prosal= c(rep(0,40))
+  pronit=c(rep(0,40))
+  propoh=c(rep(0,40))
+  protot=c(rep(0,40))
+  
+  # here we get the probability of the reading from our croc that belongs to the waterhole j's distribution.
+  for (j in 1:40){
+    prosal[j]=dnorm(readings[1],probs$salinity[j,1],probs$salinity[j,2])
+    pronit[j]=dnorm(readings[2],probs$nitrogen[j,1],probs$nitrogen[j,2])
+    propoh[j]=dnorm(readings[3],probs$phosphate[j,1],probs$phosphate[j,2])
+    protot[j]=prosal[j]*pronit[j]*propoh[j]
+  }
+
+  #transit our initial state using the transition matrix and multiply the probability. so we get the probability of croc is in that water whole
+  
+  stateold=initials
+  
+
+  
+  state = stateold %*% getTransitionMatrix() * protot
+  
+
+  
+  #normallize our probability so that the total probability is 1. 
+  state=state/sum(state)
+  print('state')
+  print(state)
+  croclocation=which.max(state)
+  print(croclocation)
+  
+  #################having trouble to set stateold=state
+  
+  #---------------------test run-----------
+  
+  
   options=getOptions(positions[3],edges)
+  
   print("Move 1 options (plus 0 for search):")
   print(options)
   mv1=readline("Move 1: ")
