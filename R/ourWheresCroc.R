@@ -10,6 +10,8 @@ for each turn
 initials=c(rep(0.025,40))
 #print(initials)
 
+state = initials
+
 #alternative way to start our initial croc cannot be at position[1][2][3]
 getinitials=function(){
   pstart=1/37
@@ -44,9 +46,19 @@ getTransitionMatrix=function(point,edges){
   
   return (A)
 }
+###############################################
+
+################################################
+#this function get you the latest state
+getcurrentstate = function(state){
+  return (tail(state,1))
+}
 
 
-#creating vector for store probability of S, N, P
+
+
+transit2nextstate = function(pre_state){
+
 prosal= c(rep(0,40))
 pronit=c(rep(0,40))
 propoh=c(rep(0,40))
@@ -61,22 +73,21 @@ for (j in 1:40){
   
 }
 
-
-
-
 #transit our initial state using the transition matrix and multiply the probability. so we get the probability of croc is in that water whole
-stateold=initials
 
-
-state = stateold %*% getTransitionMatrix() * protot
-
-
+statenew = pre_state %*% getTransitionMatrix() * protot
 
 #normallize our probability so that the total probability is 1. 
-state=state/sum(state)
-print('state')
-print(state)
-croclocation=which.max(state)
-print(croclocation)
+statenew = statenew/sum(statenew)
+#print('state')
+#print(state)
+#croclocation=which.max(state)
+#print(croclocation)
 
+return(statenew)
+}
+
+statenew=transit2nextstate(pre_state)
+
+state = rbind(state,statenew)
 
